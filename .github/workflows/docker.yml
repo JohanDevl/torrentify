@@ -28,5 +28,5 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: thimble9057/torrentify:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/torrentify:latest
           platforms: linux/amd64,linux/arm64
