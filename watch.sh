@@ -69,9 +69,31 @@ echo "🚀 Scan initial au démarrage"
 node /app/scene-maker.js
 # ------------------------------
 
-[ "$ENABLE_FILMS" = "true" ] && watch_dir "/films" "films" &
-[ "$ENABLE_SERIES" = "true" ] && watch_dir "/series" "series" &
-[ "$ENABLE_MUSIQUES" = "true" ] && watch_dir "/musiques" "musiques" &
+FILMS_DIRS="${FILMS_DIRS:-/films}"
+SERIES_DIRS="${SERIES_DIRS:-/series}"
+MUSIQUES_DIRS="${MUSIQUES_DIRS:-/musiques}"
+
+start_watchers() {
+  ENABLED="$1"
+  DIRS_RAW="$2"
+  LABEL="$3"
+  [ "$ENABLED" != "true" ] && return
+  OLD_IFS="$IFS"
+  IFS=','
+  for DIR in $DIRS_RAW; do
+    DIR=$(echo "$DIR" | xargs)
+    if [ -d "$DIR" ]; then
+      watch_dir "$DIR" "$LABEL" &
+    else
+      echo "⚠️ Répertoire introuvable ($LABEL) : $DIR"
+    fi
+  done
+  IFS="$OLD_IFS"
+}
+
+start_watchers "$ENABLE_FILMS" "$FILMS_DIRS" "films"
+start_watchers "$ENABLE_SERIES" "$SERIES_DIRS" "series"
+start_watchers "$ENABLE_MUSIQUES" "$MUSIQUES_DIRS" "musiques"
 
 if [ "$ENABLE_FILMS" != "true" ] && \
    [ "$ENABLE_SERIES" != "true" ] && \

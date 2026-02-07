@@ -39,6 +39,9 @@ et prépare des fichiers propres et prêts à l’usage pour les **trackers priv
 | `ENABLE_SERIES` | Active le traitement et la surveillance des séries (`true` / `false`) |
 | `ENABLE_MUSIQUES` | Active le traitement et la surveillance des musiques (`true` / `false`) |
 | `PARALLEL_JOBS` | Nombre de fichiers traités en parallèle (défaut : `1`) |
+| `FILMS_DIRS` | Répertoires source des films, séparés par virgules (défaut : `/films`) |
+| `SERIES_DIRS` | Répertoires source des séries, séparés par virgules (défaut : `/series`) |
+| `MUSIQUES_DIRS` | Répertoires source des musiques, séparés par virgules (défaut : `/musiques`) |
 
 > ⚠️ **Au moins un des trois** (`ENABLE_FILMS` ou `ENABLE_SERIES` ou `ENABLE_MUSIQUES`) doit être activé.
 
@@ -49,9 +52,9 @@ et prépare des fichiers propres et prêts à l’usage pour les **trackers priv
 ### 📥 Entrée (vidéos)
 | Chemin conteneur | Description |
 |-----------------|------------|
-| `/films` | Dossier des films (optionnel) |
-| `/series` | Dossier des séries (optionnel) |
-| `/musiques` | Dossier des musiques (optionnel) |
+| `/films` | Dossier des films par défaut (configurable via `FILMS_DIRS`) |
+| `/series` | Dossier des séries par défaut (configurable via `SERIES_DIRS`) |
+| `/musiques` | Dossier des musiques par défaut (configurable via `MUSIQUES_DIRS`) |
 
 ### 📤 Sortie
 | Chemin conteneur | Description |
@@ -108,6 +111,10 @@ services:
       # Trackers (séparés par virgules)
       TRACKERS: https://tracker1/announce,https://tracker2/announce
 
+      # Répertoires sources multiples (optionnel, séparés par virgules)
+      # FILMS_DIRS: "/films,/films-4k"
+      # SERIES_DIRS: "/series,/series-4k"
+
       # Optionnel
       PARALLEL_JOBS: 1
 
@@ -116,6 +123,9 @@ services:
       - /source/films:/films
       - /source/series:/series
       - /source/musiques:/musiques
+      # Entrées supplémentaires (décommenter si multi-répertoire)
+      # - /source/films-4k:/films-4k
+      # - /source/series-4k:/series-4k
 
       # Sorties
       - /destination/torrent:/data

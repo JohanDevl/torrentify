@@ -19,21 +19,28 @@ const ENABLE_FILMS = process.env.ENABLE_FILMS === 'true';
 const ENABLE_SERIES = process.env.ENABLE_SERIES === 'true';
 const ENABLE_MUSIQUES = process.env.ENABLE_MUSIQUES === 'true';
 
+function parseDirs(envVar, defaultDir) {
+  const raw = process.env[envVar];
+  if (!raw || !raw.trim()) return [defaultDir];
+  const dirs = [...new Set(raw.split(',').map(d => d.trim().replace(/\/+$/, '')).filter(Boolean))];
+  return dirs.length ? dirs : [defaultDir];
+}
+
 const MEDIA_CONFIG = [
   ENABLE_FILMS && {
     name: 'films',
-    source: '/films',
+    sources: parseDirs('FILMS_DIRS', '/films'),
     dest: path.join(DEST_DIR, 'films')
   },
   ENABLE_MUSIQUES && {
-  name: 'musiques',
-  source: '/musiques',
-  dest: path.join(DEST_DIR, 'musiques'),
-  api: 'itunes'
-},
+    name: 'musiques',
+    sources: parseDirs('MUSIQUES_DIRS', '/musiques'),
+    dest: path.join(DEST_DIR, 'musiques'),
+    api: 'itunes'
+  },
   ENABLE_SERIES && {
     name: 'series',
-    source: '/series',
+    sources: parseDirs('SERIES_DIRS', '/series'),
     dest: path.join(DEST_DIR, 'series')
   }
 ].filter(Boolean);
@@ -64,6 +71,15 @@ fs.mkdirSync(CACHE_DIR_ITUNES, { recursive: true });
 fs.mkdirSync(DEST_DIR, { recursive: true });
 for (const m of MEDIA_CONFIG) {
   fs.mkdirSync(m.dest, { recursive: true });
+}
+
+for (const m of MEDIA_CONFIG) {
+  console.log(`📂 ${m.name} : ${m.sources.length} source(s) → ${m.sources.join(', ')}`);
+  for (const src of m.sources) {
+    if (!fs.existsSync(src)) {
+      console.warn(`⚠️ Répertoire source introuvable : ${src} (${m.name})`);
+    }
+  }
 }
 
 // ---------------------- FINGERPRINT ----------------------
@@ -682,7 +698,10 @@ async function runTasks(tasks, limit) {
     );
 
     if (media.name === 'films') {
-      const files = await fg(VIDEO_EXT.map(e => `${media.source}/**/*.${e}`));
+      const patterns = media.sources.flatMap(src =>
+        VIDEO_EXT.map(e => `${src}/**/*.${e}`)
+      );
+      const files = [...new Set(await fg(patterns))];
       let i = 0;
       const total = files.length;
 
@@ -693,13 +712,22 @@ async function runTasks(tasks, limit) {
     }
 
     if (media.name === 'series') {
-      const entries = fs.readdirSync(media.source, { withFileTypes: true });
       const tasks = [];
-      let i = 0;
-      const total = entries.length;
+      const allEntries = [];
 
-      for (const e of entries) {
-        const full = path.join(media.source, e.name);
+      for (const src of media.sources) {
+        if (!fs.existsSync(src)) continue;
+        const entries = fs.readdirSync(src, { withFileTypes: true });
+        for (const e of entries) {
+          allEntries.push({ entry: e, source: src });
+        }
+      }
+
+      let i = 0;
+      const total = allEntries.length;
+
+      for (const { entry: e, source: src } of allEntries) {
+        const full = path.join(src, e.name);
 
         if (e.isFile() && isVideoFile(e.name)) {
           tasks.push(() =>
@@ -723,14 +751,21 @@ async function runTasks(tasks, limit) {
     }
 	
 	if (media.name === 'musiques') {
-  const entries = fs.readdirSync(media.source, { withFileTypes: true });
+  const allEntries = [];
+  for (const src of media.sources) {
+    if (!fs.existsSync(src)) continue;
+    const entries = fs.readdirSync(src, { withFileTypes: true });
+    for (const e of entries) {
+      allEntries.push({ entry: e, source: src });
+    }
+  }
 
   let i = 0;
-  const total = entries.length;
+  const total = allEntries.length;
 
-  const tasks = entries.map(e => () =>
+  const tasks = allEntries.map(({ entry: e, source: src }) => () =>
     processMusicEntry(
-      path.join(media.source, e.name),
+      path.join(src, e.name),
       media.dest,
       ++i,
       total

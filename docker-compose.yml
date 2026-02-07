@@ -19,6 +19,12 @@ services:
       # Trackers (séparés par virgules)
       TRACKERS: https://tracker1/announce,https://tracker2/announce
 
+      # Répertoires sources multiples (optionnel, séparés par virgules)
+      # Si non défini, utilise les chemins par défaut : /films, /series, /musiques
+      # FILMS_DIRS: "/films,/films-4k"
+      # SERIES_DIRS: "/series,/series-4k"
+      # MUSIQUES_DIRS: "/musiques"
+
       # Optionnel
       PARALLEL_JOBS: 1
 
@@ -27,6 +33,9 @@ services:
       - /mnt/user/data/films:/films
       - /mnt/user/data/series:/series
       - /mnt/user/data/musiques:/musiques
+      # Entrées supplémentaires (décommenter si multi-répertoire)
+      # - /mnt/user/data/films-4k:/films-4k
+      # - /mnt/user/data/series-4k:/series-4k
 
       # Sorties
       - /mnt/user/data/torrent:/data
