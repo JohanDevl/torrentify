@@ -22,7 +22,7 @@ on:
         default: "latest"
 
 env:
-  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/torrentify
+  GHCR_IMAGE: ghcr.io/${{ vars.GHCR_USERNAME }}/${{ vars.REPO_NAME }}
 
 jobs:
   build:
@@ -145,7 +145,7 @@ jobs:
         id: meta-dockerhub
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/torrentify
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.REPO_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ steps.version.outputs.version }},enable={{is_default_branch}}
@@ -174,4 +174,4 @@ jobs:
 
       - name: Inspect Docker Hub image
         run: |
-          docker buildx imagetools inspect ${{ secrets.DOCKERHUB_USERNAME }}/torrentify:${{ steps.meta-dockerhub.outputs.version }}
+          docker buildx imagetools inspect ${{ secrets.DOCKERHUB_USERNAME }}/${{ vars.REPO_NAME }}:${{ steps.meta-dockerhub.outputs.version }}
