@@ -26,6 +26,7 @@ et prépare des fichiers propres et prêts à l'usage pour les **trackers privé
 - ⚙️ Activation indépendante des **films**, **séries** et des **musiques**
 - 🎯 Détection automatique saison vs série complète avec nombre de fichiers et taille totale dans le NFO
 - ⏳ Détection des téléchargements en cours (`.part`, `.tmp`, `.crdownload`)
+- 🔄 Détection des modifications de fichiers source (taille/mtime) avec retraitement automatique
 - ⚡ Traitement parallèle configurable
 - 📁 Sortie structurée par type (films / séries / musiques)
 - 🐳 Image Docker légère basée sur Alpine
