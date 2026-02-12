@@ -1,10 +1,10 @@
-# Torrentify Installation and Usage Guide
+# Mediatorr Installation and Usage Guide
 
-Torrentify is a Docker-based automation tool that monitors media directories and generates `.torrent`, `.nfo`, and metadata `.txt` files for films, series, and music. This guide covers installation, configuration, and troubleshooting.
+Mediatorr is a Docker-based automation tool that monitors media directories and generates `.torrent`, `.nfo`, and metadata `.txt` files for films, series, and music. This guide covers installation, configuration, and troubleshooting.
 
 ## Prerequisites
 
-Before installing Torrentify, ensure you have:
+Before installing Mediatorr, ensure you have:
 
 - **Docker** and **Docker Compose** installed on your system
 - A **TMDb API key** (required if processing films or series)
@@ -20,9 +20,9 @@ For a minimal setup with just films:
 
 ```yaml
 services:
-  torrentify:
-    image: johandevl/torrentify:latest
-    container_name: torrentify
+  mediatorr:
+    image: johandevl/mediatorr:latest
+    container_name: mediatorr
     restart: unless-stopped
     user: "1000:1000"
     environment:
@@ -45,7 +45,7 @@ docker compose up -d
 Monitor progress with:
 
 ```bash
-docker logs -f torrentify
+docker logs -f mediatorr
 ```
 
 ## Full Configuration Example
@@ -54,9 +54,9 @@ For a complete setup with films, series, and music across multiple directories:
 
 ```yaml
 services:
-  torrentify:
-    image: johandevl/torrentify:latest
-    container_name: torrentify
+  mediatorr:
+    image: johandevl/mediatorr:latest
+    container_name: mediatorr
     restart: unless-stopped
     user: "1000:1000"
     environment:
@@ -204,7 +204,7 @@ environment:
 
 ## Output Structure
 
-Torrentify generates the following directory structure in your `/data` volume:
+Mediatorr generates the following directory structure in your `/data` volume:
 
 ```
 /data/
@@ -241,7 +241,7 @@ After starting the container, verify everything is working:
 1. **Check container logs:**
 
 ```bash
-docker logs torrentify
+docker logs mediatorr
 ```
 
 You should see messages about scanning directories and processing media files.
@@ -257,7 +257,7 @@ ls -la /path/to/output/torrent/films/
 3. **Watch real-time processing:**
 
 ```bash
-docker logs -f torrentify
+docker logs -f mediatorr
 ```
 
 ## Troubleshooting
@@ -278,7 +278,7 @@ environment:
 Check the logs for specific errors:
 
 ```bash
-docker logs torrentify
+docker logs mediatorr
 ```
 
 Common causes:
@@ -299,7 +299,7 @@ Verify your API key:
 Check the container logs:
 
 ```bash
-docker logs torrentify | grep -i tmdb
+docker logs mediatorr | grep -i tmdb
 ```
 
 ### Permission Denied Errors
@@ -318,7 +318,7 @@ ls -la /path/to/output
 
 ### Torrent Not Regenerated After File Change
 
-Torrentify detects file changes but waits for the scan cooldown period. Default is 5 seconds:
+Mediatorr detects file changes but waits for the scan cooldown period. Default is 5 seconds:
 
 ```yaml
 environment:
@@ -328,7 +328,7 @@ environment:
 To force a rescan, restart the container:
 
 ```bash
-docker restart torrentify
+docker restart mediatorr
 ```
 
 ### API Cache Corruption
@@ -338,13 +338,13 @@ If API caches become corrupted, the application automatically repairs them. If i
 ```bash
 rm -rf /path/to/output/cache_tmdb/
 rm -rf /path/to/output/cache_itunes/
-docker restart torrentify
+docker restart mediatorr
 ```
 
 ## Unraid-specific Setup
 
 1. **Install from Community Applications:**
-   - Search for "Torrentify"
+   - Search for "Mediatorr"
    - Add as a custom Docker container
 
 2. **Configure volumes:**
@@ -370,14 +370,14 @@ User: 99:100  (nobody:users)
 5. **Save and apply**
 
 6. **Monitor logs:**
-   - Docker tab → Torrentify → Logs
+   - Docker tab → Mediatorr → Logs
 
 ## Docker Registry
 
-Torrentify is available on two registries:
+Mediatorr is available on two registries:
 
-- **Docker Hub:** `johandevl/torrentify:latest`
-- **GitHub Container Registry:** `ghcr.io/johandevl/torrentify:latest`
+- **Docker Hub:** `johandevl/mediatorr:latest`
+- **GitHub Container Registry:** `ghcr.io/johandevl/mediatorr:latest`
 
 Use either in your docker-compose.yml.
 
@@ -414,7 +414,7 @@ If you need to update tracker announce URLs after deployment:
 docker compose up -d
 ```
 
-Torrentify automatically detects the change and updates all existing `.torrent` files using `mkbrr modify`.
+Mediatorr automatically detects the change and updates all existing `.torrent` files using `mkbrr modify`.
 
 ## Performance Tuning
 
@@ -432,7 +432,7 @@ Higher values process faster but consume more resources. Adjust based on your sy
 
 If you encounter issues not covered in this guide:
 
-1. Check the container logs: `docker logs torrentify`
+1. Check the container logs: `docker logs mediatorr`
 2. Review the Troubleshooting section above
 3. Verify all prerequisites are met
 4. Ensure media filenames follow standard naming conventions

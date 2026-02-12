@@ -1,7 +1,7 @@
 services:
-  torrentify:
-    image: johandevl/torrentify:latest
-    container_name: torrentify
+  mediatorr:
+    image: johandevl/mediatorr:latest
+    container_name: mediatorr
     restart: unless-stopped
     
     user: "1000:1000"

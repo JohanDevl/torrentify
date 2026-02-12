@@ -1,6 +1,6 @@
-# Torrentify
+# Mediatorr
 
-**Torrentify** is a Docker container that automatically generates **.torrent**, **.nfo**, and **TMDb / iTunes** metadata files from **films, series, and music**.
+**Mediatorr** is a Docker container that automatically generates **.torrent**, **.nfo**, and **TMDb / iTunes** metadata files from **films, series, and music**.
 
 It monitors one or more directories, analyzes filenames, fetches metadata from **TMDb** (films & series) and **iTunes** (music), and prepares clean, ready-to-use files for **private trackers** on **Unraid**, **NAS**, and **seedbox** setups.
 
@@ -35,9 +35,9 @@ It monitors one or more directories, analyzes filenames, fetches metadata from *
 
 ```yaml
 services:
-  torrentify:
-    image: johandevl/torrentify:latest
-    container_name: torrentify
+  mediatorr:
+    image: johandevl/mediatorr:latest
+    container_name: mediatorr
     restart: unless-stopped
     user: "1000:1000"
     environment:
@@ -149,9 +149,9 @@ services:
 
 ```yaml
 services:
-  torrentify:
-    image: johandevl/torrentify:latest
-    container_name: torrentify
+  mediatorr:
+    image: johandevl/mediatorr:latest
+    container_name: mediatorr
     restart: unless-stopped
     user: "1000:1000"
     environment:
@@ -194,7 +194,7 @@ For more details, see the full documentation:
 
 ## Tracker Management
 
-On startup, Torrentify computes a SHA256 fingerprint of the configured tracker URLs. If trackers have changed since the last run, all existing `.torrent` files are automatically updated with the new URLs via `mkbrr modify`.
+On startup, Mediatorr computes a SHA256 fingerprint of the configured tracker URLs. If trackers have changed since the last run, all existing `.torrent` files are automatically updated with the new URLs via `mkbrr modify`.
 
 ---
 

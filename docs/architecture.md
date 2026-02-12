@@ -1,8 +1,8 @@
-# Torrentify Architecture
+# Mediatorr Architecture
 
 ## Overview
 
-Torrentify is a Docker-based automation tool that monitors media directories and generates `.torrent`, `.nfo`, and metadata `.txt` files for films, series, and music. Designed for NAS/seedbox deployments (Unraid, etc.) with private trackers.
+Mediatorr is a Docker-based automation tool that monitors media directories and generates `.torrent`, `.nfo`, and metadata `.txt` files for films, series, and music. Designed for NAS/seedbox deployments (Unraid, etc.) with private trackers.
 
 **Current version**: 1.1.2 (tracked in `VERSION` file)
 
@@ -11,7 +11,7 @@ Torrentify is a Docker-based automation tool that monitors media directories and
 ## Project Structure
 
 ```
-torrentify/
+mediatorr/
 ├── scene-maker.js              # Core processing logic (CommonJS, Node.js 20)
 ├── watch.sh                    # Entrypoint: initial scan + inotifywait real-time watchers
 ├── docker-entrypoint.sh        # Alternative entrypoint with PUID/PGID user mapping
@@ -414,9 +414,9 @@ The Dockerfile uses a multi-stage build process:
 
 ```yaml
 services:
-  torrentify:
+  mediatorr:
     build: .
-    image: torrentify:latest
+    image: mediatorr:latest
     environment:
       TRACKERS: "http://tracker.example.com:6969/announce"
       TMDB_API_KEY: "your_key_here"
@@ -448,8 +448,8 @@ Automated image building and registry publishing.
 - Docker buildx for multi-platform image creation
 
 **Registry targets**:
-- **GHCR**: `ghcr.io/{user}/torrentify`
-- **Docker Hub**: `johandevl/torrentify`
+- **GHCR**: `ghcr.io/{user}/mediatorr`
+- **Docker Hub**: `johandevl/mediatorr`
 
 **Image tagging**:
 - `latest` (main branch only)

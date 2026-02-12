@@ -1,11 +1,11 @@
-# Torrentify Features
+# Mediatorr Features
 
-Torrentify is a Docker-based automation tool that monitors media directories and generates `.torrent`, `.nfo`, and metadata files for films, series, and music. This document outlines all capabilities designed for NAS/seedbox deployments with private trackers.
+Mediatorr is a Docker-based automation tool that monitors media directories and generates `.torrent`, `.nfo`, and metadata files for films, series, and music. This document outlines all capabilities designed for NAS/seedbox deployments with private trackers.
 
 ## Torrent Generation
 
 ### Automatic Creation
-Torrentify automatically generates `.torrent` files for all supported media types using the `mkbrr` utility with the private flag, ensuring compatibility with private trackers.
+Mediatorr automatically generates `.torrent` files for all supported media types using the `mkbrr` utility with the private flag, ensuring compatibility with private trackers.
 
 ### Multiple Tracker Support
 Configure one or more tracker announce URLs via the `TRACKERS` environment variable (comma-separated). The tool handles tracker management automatically:
@@ -21,7 +21,7 @@ Configure one or more tracker announce URLs via the `TRACKERS` environment varia
 ## NFO (Metadata) Generation
 
 ### Technical Metadata Extraction
-Torrentify uses `mediainfo` to extract comprehensive technical details from media files:
+Mediatorr uses `mediainfo` to extract comprehensive technical details from media files:
 - Video codec, resolution, bitrate, frame rate
 - Audio codec, channels, sample rate
 - Duration and other technical specifications
@@ -34,7 +34,7 @@ Generated `.nfo` files include:
 - For series: file count and total size information
 
 ### Source NFO Preservation
-If source directories contain existing `.nfo` files, Torrentify copies them as `{name}.source.nfo`:
+If source directories contain existing `.nfo` files, Mediatorr copies them as `{name}.source.nfo`:
 - **Films**: Only copies if the video file is in a subfolder (not at source root)
 - **Series**: Copies if found at folder root
 - Preserves original source metadata for reference
@@ -42,7 +42,7 @@ If source directories contain existing `.nfo` files, Torrentify copies them as `
 ## Metadata Lookup and Caching
 
 ### TMDb Integration (Films & Series)
-Torrentify queries The Movie Database API for comprehensive metadata:
+Mediatorr queries The Movie Database API for comprehensive metadata:
 - **Language fallback**: Searches French (FR-FR) first, automatically falls back to English (en-US) if not found
 - **Retrieved data**: Title, overview, release date, genres, and TMDb ID
 - **Films**: Uses movie search endpoint
@@ -64,13 +64,13 @@ Music metadata is retrieved from iTunes Search API:
 ## Real-Time Monitoring
 
 ### Continuous Directory Watching
-Torrentify monitors configured media directories in real-time using `inotifywait`:
+Mediatorr monitors configured media directories in real-time using `inotifywait`:
 - Detects `create`, `moved_to`, and `close_write` events
 - Triggers processing immediately when new media is added
 - Watches recursively across all subdirectories
 
 ### Initial Scan
-On container startup, Torrentify performs a full scan of all configured directories before entering real-time monitoring mode. This ensures no existing media is missed.
+On container startup, Mediatorr performs a full scan of all configured directories before entering real-time monitoring mode. This ensures no existing media is missed.
 
 ### Cooldown Mechanism
 Configurable scan cooldown (default: 5 seconds, via `SCAN_COOLDOWN` env var) prevents redundant processing when multiple file operations occur in quick succession.
@@ -80,7 +80,7 @@ Processing errors do not stop the watcher. The tool logs failures and continues 
 
 ## Partial Download Detection
 
-Torrentify intelligently detects incomplete downloads:
+Mediatorr intelligently detects incomplete downloads:
 - Recognizes `.part`, `.tmp`, and `.crdownload` file extensions (common for incomplete downloads)
 - For music specifically: waits until all partial files are removed before processing
 - Ignores partial file events in real-time watchers to avoid premature processing
@@ -102,7 +102,7 @@ All directories are monitored with the same real-time watching and processing ru
 
 ## Smart Season Detection (Series)
 
-For series processing, Torrentify analyzes video file patterns to distinguish between a single season and a full series:
+For series processing, Mediatorr analyzes video file patterns to distinguish between a single season and a full series:
 - Examines episode patterns (S##E## format) across video files in a folder
 - If 2 or more distinct episodes and single season detected: marks as season-only release
 - Automatically renames output (e.g., from "Show.S01E01-E10" to "Show.S01")
@@ -112,7 +112,7 @@ This automation prevents misbranding of partial series as complete releases.
 
 ## Source Change Detection
 
-Torrentify tracks source media changes to detect when reprocessing is needed:
+Mediatorr tracks source media changes to detect when reprocessing is needed:
 
 ### Change Tracking
 Stores source file metadata in `.srcinfo` JSON files:
@@ -125,7 +125,7 @@ On each scan, current file metadata is compared against stored `.srcinfo`:
 - When changes are detected: existing `.nfo` and `.torrent` are deleted and regenerated
 
 ### Migration for Existing Media
-If `.srcinfo` is missing for existing processed items (e.g., from previous Torrentify versions):
+If `.srcinfo` is missing for existing processed items (e.g., from previous Mediatorr versions):
 - Creates `.srcinfo` from current file state without reprocessing
 - Prevents unnecessary regeneration of old media
 
@@ -133,7 +133,7 @@ This ensures artifacts always reflect the current source state without requiring
 
 ## Parallel Processing
 
-Torrentify supports concurrent job execution to improve performance:
+Mediatorr supports concurrent job execution to improve performance:
 - Configured via `PARALLEL_JOBS` environment variable (default: 1)
 - Applies to media processing, tracker updates, and other batch operations
 - Uses internal concurrency limiter for controlled parallelization
@@ -203,7 +203,7 @@ This information helps monitor tool performance and identify processing issues.
 
 ## Filename Parsing
 
-Torrentify uses GuessIt (Python library) for intelligent filename parsing:
+Mediatorr uses GuessIt (Python library) for intelligent filename parsing:
 - Extracts title, artist, year, and other metadata from filenames
 - Handles complex naming conventions in media communities
 - Works before skip checks to identify media even without artifacts
@@ -276,4 +276,4 @@ All generated files are stored in `/data/torrent/` with the following structure:
 
 ## Summary
 
-Torrentify automates the complete workflow of torrent creation, metadata enrichment, and artifact management for media files. Its real-time monitoring, intelligent caching, and error handling make it ideal for unattended operation on NAS systems and seedboxes. The modular design supports films, series, and music with type-specific optimizations while maintaining a unified processing pipeline.
+Mediatorr automates the complete workflow of torrent creation, metadata enrichment, and artifact management for media files. Its real-time monitoring, intelligent caching, and error handling make it ideal for unattended operation on NAS systems and seedboxes. The modular design supports films, series, and music with type-specific optimizations while maintaining a unified processing pipeline.
