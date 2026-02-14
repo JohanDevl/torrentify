@@ -783,17 +783,31 @@ function generateFilmPrez(name, nfoContent, tmdbData, fileSize, fileCount) {
   return bb;
 }
 
-function generateSeriePrez(name, nfoContent, tmdbData, fileSize, fileCount, seasonData) {
+function generateSeriePrez(name, nfoContent, tmdbData, fileSize, fileCount, seasonData, episodeData) {
   const tech = parseNfoTechnical(nfoContent, name);
   const title = escapeBBCode(tmdbData.name) || 'N/A';
+  const epMatch = name.match(/[.\s-]S(\d{1,2})E(\d{1,3})(?:[.\s-]|$)/i);
   const seasonMatch = name.match(/[.\s-]S(\d{1,2})(?:[.\s-]|$)/i);
   const isComplete = /integrale|complet[e]?|complete|int[eé]grale/i.test(name);
-  const seasonStr = isComplete ? ' - Intégrale' : seasonMatch ? ` - Saison ${parseInt(seasonMatch[1])}` : '';
+
+  let subtitle = '';
+  if (isComplete) {
+    subtitle = ' - Intégrale';
+  } else if (epMatch) {
+    const epName = episodeData?.name ? ` - ${escapeBBCode(episodeData.name)}` : '';
+    subtitle = ` - S${epMatch[1].padStart(2, '0')}E${epMatch[2].padStart(2, '0')}${epName}`;
+  } else if (seasonMatch) {
+    subtitle = ` - Saison ${parseInt(seasonMatch[1])}`;
+  }
+
   const year = tmdbData.first_air_date?.split('-')[0] || 'N/A';
   const tagline = tmdbData.tagline || '';
-  const posterPath = (!isComplete && seasonData?.poster_path) || tmdbData.poster_path;
+  const posterPath = isComplete ? tmdbData.poster_path
+    : (episodeData?.still_path ? episodeData.still_path : null)
+      || seasonData?.poster_path
+      || tmdbData.poster_path;
 
-  let bb = buildVideoPrezHeader(`${title}${seasonStr}`, year, posterPath, tagline);
+  let bb = buildVideoPrezHeader(`${title}${subtitle}`, year, posterPath, tagline);
 
   const creators = tmdbData.created_by?.map(c => escapeBBCode(c.name)).join(', ') || null;
   bb += buildInfoSection([
@@ -867,13 +881,23 @@ async function generatePrez(type, name, outDir, nfoPath, apiData, sourceFiles) {
       break;
     case 'serie': {
       let seasonData = null;
+      let episodeData = null;
+      const epMatch = name.match(/[.\s-]S(\d{1,2})E(\d{1,3})(?:[.\s-]|$)/i);
       const seasonMatch = name.match(/[.\s-]S(\d{1,2})(?:[.\s-]|$)/i);
       const isComplete = /integrale|complet[e]?|complete|int[eé]grale/i.test(name);
-      if (seasonMatch && !isComplete && apiData?.id) {
-        const seasonNum = parseInt(seasonMatch[1]);
-        seasonData = await getTMDbSeasonDetails(apiData.id, seasonNum);
+      if (!isComplete && apiData?.id) {
+        if (epMatch) {
+          const sNum = parseInt(epMatch[1]);
+          const eNum = parseInt(epMatch[2]);
+          [seasonData, episodeData] = await Promise.all([
+            getTMDbSeasonDetails(apiData.id, sNum),
+            getTMDbEpisodeDetails(apiData.id, sNum, eNum)
+          ]);
+        } else if (seasonMatch) {
+          seasonData = await getTMDbSeasonDetails(apiData.id, parseInt(seasonMatch[1]));
+        }
       }
-      bbcode = generateSeriePrez(name, nfoContent, apiData, fileSize, fileCount, seasonData);
+      bbcode = generateSeriePrez(name, nfoContent, apiData, fileSize, fileCount, seasonData, episodeData);
       break;
     }
     case 'musique':
@@ -1043,6 +1067,16 @@ async function getCachedMovie(
 
 async function getTMDbSeasonDetails(tvId, seasonNumber, language = 'fr-FR') {
   const url = `https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=${language}`;
+  try {
+    const res = await axios.get(url);
+    return res.data;
+  } catch {
+    return null;
+  }
+}
+
+async function getTMDbEpisodeDetails(tvId, seasonNumber, episodeNumber, language = 'fr-FR') {
+  const url = `https://api.themoviedb.org/3/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}?api_key=${TMDB_API_KEY}&language=${language}`;
   try {
     const res = await axios.get(url);
     return res.data;
