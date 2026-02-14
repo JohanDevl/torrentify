@@ -296,7 +296,8 @@ function detectLanguagesFromName(name) {
   const langs = [];
   if (/vff/i.test(name)) langs.push('🇫🇷 Français (VFF)');
   else if (/vf2/i.test(name)) langs.push('🇫🇷 Français (VF2)');
-  else if (/vfq/i.test(name)) langs.push('🇫🇷 Français (VFQ)');
+  else if (/vfq/i.test(name)) langs.push('🇨🇦 Français (VFQ)');
+  else if (/vfb/i.test(name)) langs.push('🇧🇪 Français (VFB)');
   else if (/truefrench/i.test(name)) langs.push('🇫🇷 Français (TrueFrench)');
   else if (/vf[fi]?(?![a-z])|french|français/i.test(name)) langs.push('🇫🇷 Français');
   if (/vostfr/i.test(name)) langs.push('🇫🇷 VOSTFR');
@@ -381,7 +382,7 @@ function parseAudioTracks(mediainfoRaw) {
       langName = langCodeToName(langMatch[1]);
     }
     if (langName) {
-      const flag = langFlag(langName);
+      const flag = langFlag(langName, langType);
       const trackInfo = langType ? `${flag} ${langName} (${langType})` : `${flag} ${langName}`;
       if (!tracks.includes(trackInfo)) tracks.push(trackInfo);
     }
@@ -572,7 +573,15 @@ function countryToFlag(countryCode) {
   return [...countryCode.toUpperCase()].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
 }
 
-function langFlag(langName) {
+const VARIANT_COUNTRY = {
+  'VFQ': 'CA', 'VFB': 'BE'
+};
+
+function langFlag(langName, variant) {
+  if (variant) {
+    const vc = VARIANT_COUNTRY[variant];
+    if (vc) return countryToFlag(vc);
+  }
   const cc = LANG_TO_COUNTRY[langName];
   return cc ? countryToFlag(cc) : '🏳️';
 }
@@ -622,7 +631,7 @@ function parseDetailedAudioTracks(mediainfoRaw) {
     if (codec === 'MLP FBA' || codec === 'MLP FBA 16-ch') codec = 'TrueHD';
     const bitrate = bitrateMatch ? bitrateMatch[1].trim() : null;
 
-    const flag = langFlag(langName);
+    const flag = langFlag(langName, langType);
     const codecName = codec ? (CODEC_NAMES[codec] || codec) : 'N/A';
     const channelStr = channels ? ` [${channels}]` : '';
     const bitrateStr = bitrate ? ` @ ${bitrate}` : '';
