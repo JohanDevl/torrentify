@@ -23,6 +23,7 @@ services:
       # - MUSIQUES_DIRS=/musiques
       # Optionnel
       - PARALLEL_JOBS=1
+      # - ENABLE_PREZ=true
 
     volumes:
       # Entrées

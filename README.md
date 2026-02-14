@@ -25,6 +25,7 @@ It monitors one or more directories, analyzes filenames, fetches metadata from *
 - ⏳ In-progress download detection (`.part`, `.tmp`, `.crdownload`)
 - 🔄 Source file change detection (size/mtime) with automatic reprocessing
 - ⚡ Configurable parallel processing
+- 📜 BBCode presentation generation (`.prez`) with TMDb/iTunes metadata and technical specs
 - 📁 Structured output by media type (films / series / music)
 - 🐳 Lightweight Alpine-based Docker image
 - 🧱 Multi-architecture support (amd64 / arm64)
@@ -89,6 +90,7 @@ services:
 |----------|-------------|
 | `PARALLEL_JOBS` | Number of files processed concurrently (default: 1) |
 | `SCAN_COOLDOWN` | Seconds between consecutive scans (default: 5) |
+| `ENABLE_PREZ` | Enable BBCode presentation generation (default: true) |
 | `PUID` | User ID for the container process |
 | `PGID` | Group ID for the container process |
 
@@ -123,6 +125,7 @@ services:
 │   │       ├── Film.Name.nfo
 │   │       ├── Film.Name.source.nfo    (copy of source NFO if present)
 │   │       ├── Film.Name.txt
+│   │       ├── Film.Name.prez          (BBCode presentation)
 │   │       └── Film.Name.srcinfo       (source change tracking)
 │   ├── series/
 │   │   └── Serie.Name.S01/
@@ -130,12 +133,14 @@ services:
 │   │       ├── Serie.Name.S01.nfo
 │   │       ├── Serie.Name.S01.source.nfo
 │   │       ├── Serie.Name.S01.txt
+│   │       ├── Serie.Name.S01.prez
 │   │       └── Serie.Name.S01.srcinfo
 │   └── musiques/
 │       └── Album.Name/
 │           ├── Album.Name.torrent
 │           ├── Album.Name.nfo
 │           ├── Album.Name.txt
+│           ├── Album.Name.prez
 │           └── Album.Name.srcinfo
 ├── cache_tmdb/
 │   └── *.json
