@@ -294,12 +294,12 @@ function detectAudioCodecFromName(name) {
 function detectLanguagesFromName(name) {
   if (!name) return null;
   const langs = [];
-  if (/vff/i.test(name)) langs.push('Français (VFF)');
-  else if (/vf2/i.test(name)) langs.push('Français (VF2)');
-  else if (/vfq/i.test(name)) langs.push('Français (VFQ)');
-  else if (/truefrench/i.test(name)) langs.push('Français (TrueFrench)');
-  else if (/vf[fi]?(?![a-z])|french|français/i.test(name)) langs.push('Français');
-  if (/vostfr/i.test(name)) langs.push('VOSTFR');
+  if (/vff/i.test(name)) langs.push('🇫🇷 Français (VFF)');
+  else if (/vf2/i.test(name)) langs.push('🇫🇷 Français (VF2)');
+  else if (/vfq/i.test(name)) langs.push('🇫🇷 Français (VFQ)');
+  else if (/truefrench/i.test(name)) langs.push('🇫🇷 Français (TrueFrench)');
+  else if (/vf[fi]?(?![a-z])|french|français/i.test(name)) langs.push('🇫🇷 Français');
+  if (/vostfr/i.test(name)) langs.push('🇫🇷 VOSTFR');
   return langs.length > 0 ? langs.join(', ') : null;
 }
 
@@ -357,7 +357,8 @@ function parseAudioTracks(mediainfoRaw) {
       langName = langCodeToName(langMatch[1]);
     }
     if (langName) {
-      const trackInfo = langType ? `${langName} (${langType})` : langName;
+      const flag = LANG_FLAGS[langName] || '🏳️';
+      const trackInfo = langType ? `${flag} ${langName} (${langType})` : `${flag} ${langName}`;
       if (!tracks.includes(trackInfo)) tracks.push(trackInfo);
     }
   }
@@ -391,14 +392,15 @@ function parseSubtitleTracks(mediainfoRaw) {
   }
   const result = [];
   for (const [lang, types] of langTypes) {
+    const flag = LANG_FLAGS[lang] || '🏳️';
     if (types.size === 0) {
-      result.push(lang);
+      result.push(`${flag} ${lang}`);
     } else {
       const sortedTypes = [...types].sort((a, b) => {
         const order = { 'Forcé': 0, 'Full': 1, 'SDH': 2 };
         return (order[a] ?? 99) - (order[b] ?? 99);
       });
-      result.push(`${lang} ${sortedTypes.join('/')}`);
+      result.push(`${flag} ${lang} ${sortedTypes.join('/')}`);
     }
   }
   return result;
@@ -481,7 +483,11 @@ function parseNfoTechnical(mediainfoRaw, releaseName) {
   } else if (info.languages === 'N/A') {
     const audioLangs = [...mediainfoRaw.matchAll(/^Audio[\s\S]*?Language\s*:\s*(\w+)/gm)];
     if (audioLangs.length) {
-      const langs = [...new Set(audioLangs.map(m => langCodeToName(m[1])))];
+      const langs = [...new Set(audioLangs.map(m => {
+        const name = langCodeToName(m[1]);
+        const flag = LANG_FLAGS[name] || '🏳️';
+        return `${flag} ${name}`;
+      }))];
       info.languages = langs.join(', ');
     }
   }
@@ -492,7 +498,11 @@ function parseNfoTechnical(mediainfoRaw, releaseName) {
   } else {
     const textLangs = [...mediainfoRaw.matchAll(/^Text[\s\S]*?Language\s*:\s*(\w+)/gm)];
     if (textLangs.length) {
-      const subs = [...new Set(textLangs.map(m => langCodeToName(m[1])))];
+      const subs = [...new Set(textLangs.map(m => {
+        const name = langCodeToName(m[1]);
+        const flag = LANG_FLAGS[name] || '🏳️';
+        return `${flag} ${name}`;
+      }))];
       info.subtitles = subs.join(', ');
     }
   }
