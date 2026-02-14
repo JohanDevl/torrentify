@@ -21,11 +21,11 @@ const ENABLE_MUSIQUES = process.env.ENABLE_MUSIQUES === 'true';
 const ENABLE_PREZ = process.env.ENABLE_PREZ !== 'false';
 
 const PREZ_IMAGES = {
-  info: 'https://i.imgur.com/u3WEe1w.png',
-  synopsis: 'https://i.imgur.com/W3pvv6q.png',
-  technical: 'https://i.imgur.com/KMZsqZn.png',
-  size: 'https://i.imgur.com/KFsABlN.png',
-  link: 'https://i.imgur.com/mxI05s2.png'
+  info: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/infos.png',
+  synopsis: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/pitch.png',
+  technical: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/serie.png',
+  size: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/download.png',
+  link: 'https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/tmdb.png'
 };
 
 function parseDirs(envVar, defaultDir) {
