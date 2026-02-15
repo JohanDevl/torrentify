@@ -26,7 +26,7 @@ const PREZ_IMAGES = {
   synopsis: process.env.PREZ_IMG_SYNOPSIS || `${PREZ_IMG_BASE}/pitch.png`,
   movie: process.env.PREZ_IMG_MOVIE || `${PREZ_IMG_BASE}/movie.png`,
   serie: process.env.PREZ_IMG_SERIE || `${PREZ_IMG_BASE}/serie.png`,
-  size: process.env.PREZ_IMG_SIZE || `${PREZ_IMG_BASE}/download.png`,
+  download: process.env.PREZ_IMG_DOWNLOAD || `${PREZ_IMG_BASE}/download.png`,
   link: process.env.PREZ_IMG_LINK || `${PREZ_IMG_BASE}/tmdb.png`
 };
 
@@ -746,7 +746,7 @@ function buildTechnicalSection(tech, nfoContent, mediaType) {
 }
 
 function buildSizeSection(fileSize, fileCount) {
-  let bb = `[img]${PREZ_IMAGES.size}[/img]\n`;
+  let bb = `[img]${PREZ_IMAGES.download}[/img]\n`;
   bb += `[b][color=#3d85c6]Taille totale :[/color][/b] ${fileSize}\n`;
   bb += `[b][color=#3d85c6]Nombre de fichier :[/color][/b] ${fileCount}[/size][/font][/center]\n\n`;
   return bb;
@@ -857,7 +857,7 @@ function generateMusiquePrez(name, nfoContent, itunesData, fileSize, fileCount) 
   bb += `[img]${PREZ_IMAGES.serie}[/img]\n`;
   bb += `[b][color=#3d85c6]Codec Audio :[/color][/b] [i]${tech.audioCodec}[/i]\n\n`;
 
-  bb += `[img]${PREZ_IMAGES.size}[/img]\n`;
+  bb += `[img]${PREZ_IMAGES.download}[/img]\n`;
   bb += `[b][color=#3d85c6]Taille totale :[/color][/b] ${fileSize}\n`;
   bb += `[b][color=#3d85c6]Nombre de fichier :[/color][/b] ${fileCount}[/size][/font][/center]\n\n`;
   bb += buildFooter();

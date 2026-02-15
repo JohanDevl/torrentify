@@ -29,7 +29,7 @@ services:
       # - PREZ_IMG_SYNOPSIS=https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/pitch.png
       # - PREZ_IMG_MOVIE=https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/movie.png
       # - PREZ_IMG_SERIE=https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/serie.png
-      # - PREZ_IMG_SIZE=https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/download.png
+      # - PREZ_IMG_DOWNLOAD=https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/download.png
       # - PREZ_IMG_LINK=https://raw.githubusercontent.com/JohanDevl/mediatorr/main/assets/images/tmdb.png
 
     volumes:
