@@ -73,11 +73,6 @@ if [ "$ENABLE_WEB" = "true" ]; then
 fi
 # -----------------------------
 
-# -------- SCAN INITIAL --------
-echo "🚀 Scan initial au démarrage"
-node /app/scene-maker.js
-# ------------------------------
-
 FILMS_DIRS="${FILMS_DIRS:-/films}"
 SERIES_DIRS="${SERIES_DIRS:-/series}"
 MUSIQUES_DIRS="${MUSIQUES_DIRS:-/musiques}"

@@ -6,6 +6,7 @@
     "axios": "^1.6.0",
     "express": "^4.21.0",
     "fast-glob": "^3.3.2",
+    "node-cron": "^3.0.3",
     "string-similarity": "^4.0.4"
   }
 }

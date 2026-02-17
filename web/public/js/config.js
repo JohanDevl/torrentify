@@ -4,6 +4,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('btn-save').addEventListener('click', () => saveConfig(false));
   document.getElementById('btn-save-scan').addEventListener('click', () => saveConfig(true));
 
+  // Cron presets
+  document.querySelectorAll('[data-cron]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('cfg-schedule').value = btn.dataset.cron;
+      updateScheduleDescription(btn.dataset.cron);
+    });
+  });
+
+  document.getElementById('cfg-schedule').addEventListener('input', (e) => {
+    updateScheduleDescription(e.target.value);
+  });
+
   document.querySelectorAll('[id^="cfg-img-"]').forEach(input => {
     input.addEventListener('input', () => {
       const key = input.id.replace('cfg-img-', '');
@@ -35,6 +47,8 @@ async function loadConfig() {
     document.getElementById('cfg-prez').checked = config.enablePrez !== false;
     document.getElementById('cfg-parallel').value = config.parallelJobs || 1;
     document.getElementById('cfg-cooldown').value = config.scanCooldown || 5;
+    document.getElementById('cfg-schedule').value = config.scanSchedule || '';
+    updateScheduleDescription(config.scanSchedule || '');
 
     const images = config.prezImages || {};
     ['info', 'synopsis', 'movie', 'serie', 'download', 'link'].forEach(key => {
@@ -65,6 +79,7 @@ function collectConfig() {
     enablePrez: document.getElementById('cfg-prez').checked,
     parallelJobs: parseInt(document.getElementById('cfg-parallel').value) || 1,
     scanCooldown: parseInt(document.getElementById('cfg-cooldown').value) || 5,
+    scanSchedule: document.getElementById('cfg-schedule').value.trim(),
     filmsDirs: document.getElementById('cfg-films-dirs').value.split(',').map(d => d.trim()).filter(Boolean),
     seriesDirs: document.getElementById('cfg-series-dirs').value.split(',').map(d => d.trim()).filter(Boolean),
     musiquesDirs: document.getElementById('cfg-musiques-dirs').value.split(',').map(d => d.trim()).filter(Boolean),
@@ -74,6 +89,34 @@ function collectConfig() {
       ])
     )
   };
+}
+
+const CRON_DESCRIPTIONS = {
+  '0 */6 * * *': 'Toutes les 6 heures',
+  '0 */12 * * *': 'Toutes les 12 heures',
+  '0 0 * * *': 'Chaque jour a minuit',
+  '0 3 * * *': 'Chaque jour a 3h du matin',
+  '*/30 * * * *': 'Toutes les 30 minutes',
+  '0 */1 * * *': 'Toutes les heures'
+};
+
+function updateScheduleDescription(expr) {
+  const el = document.getElementById('schedule-description');
+  if (!expr) {
+    el.textContent = 'Scan planifie desactive';
+    return;
+  }
+  if (CRON_DESCRIPTIONS[expr]) {
+    el.textContent = CRON_DESCRIPTIONS[expr];
+    return;
+  }
+  // Basic validation: 5 fields separated by spaces
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length === 5) {
+    el.textContent = 'Expression cron personnalisee';
+  } else {
+    el.textContent = 'Expression invalide (5 champs requis: min heure jour mois jour_semaine)';
+  }
 }
 
 async function saveConfig(andScan) {

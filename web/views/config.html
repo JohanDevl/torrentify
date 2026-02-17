@@ -87,6 +87,27 @@
       </div>
     </div>
 
+    <!-- Section: Scan Schedule -->
+    <div class="card form-section">
+      <h3 class="form-section-title">Planification des scans</h3>
+      <p class="form-help" style="margin-bottom: var(--spacing-lg);">Planifiez des scans automatiques via une expression cron. Laissez vide pour desactiver.</p>
+      <div class="form-group">
+        <label class="form-label">Expression cron</label>
+        <input type="text" class="input" id="cfg-schedule" placeholder="Ex: 0 */6 * * *">
+        <span class="form-help" id="schedule-description"></span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Presets</label>
+        <div class="schedule-presets">
+          <button type="button" class="btn btn-sm" data-cron="0 */6 * * *">Toutes les 6h</button>
+          <button type="button" class="btn btn-sm" data-cron="0 */12 * * *">Toutes les 12h</button>
+          <button type="button" class="btn btn-sm" data-cron="0 0 * * *">Chaque jour (minuit)</button>
+          <button type="button" class="btn btn-sm" data-cron="0 3 * * *">Chaque jour (3h)</button>
+          <button type="button" class="btn btn-sm" data-cron="">Desactiver</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Section: Prez Images -->
     <div class="card form-section">
       <h3 class="form-section-title">Images Prez (en-tetes BBCode)</h3>

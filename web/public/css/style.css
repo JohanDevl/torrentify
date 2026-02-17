@@ -1260,6 +1260,12 @@ input[type='checkbox'] {
   font-size: 12px;
 }
 
+.schedule-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
 .btn.active {
   background-color: var(--accent);
   color: #ffffff;
