@@ -20,6 +20,7 @@ const ENABLE_SERIES = process.env.ENABLE_SERIES === 'true';
 const ENABLE_MUSIQUES = process.env.ENABLE_MUSIQUES === 'true';
 const ENABLE_PREZ = process.env.ENABLE_PREZ !== 'false';
 const FORCE_PREZ = process.env.FORCE_PREZ === 'true';
+const PREZ_STYLE = parseInt(process.env.PREZ_STYLE) || 1;
 
 function parseDirs(envVar, defaultDir) {
   const raw = process.env[envVar];
@@ -599,7 +600,9 @@ const CODEC_SHORT = {
   'FLAC': 'FLAC', 'Atmos': 'Atmos'
 };
 
-function parseDetailedAudioTracks(mediainfoRaw) {
+// ---------------------- PREZ DATA PARSERS ----------------------
+
+function parseAudioTracksRaw(mediainfoRaw) {
   if (!mediainfoRaw) return [];
   const tracks = [];
   const audioRegex = /^Audio(?: #\d+)?\s*\n([\s\S]*?)(?=^(?:Audio|Text|Menu|$)|\n\n\n)/gm;
@@ -624,39 +627,30 @@ function parseDetailedAudioTracks(mediainfoRaw) {
     }
     if (!langName) continue;
 
-    const channels = channelsMatch ? (parseInt(channelsMatch[1]) > 2 ? `${channelsMatch[1] - 1}.1` : '2.0') : null;
+    const channels = channelsMatch ? (parseInt(channelsMatch[1]) > 2 ? `${channelsMatch[1] - 1}.1` : '2.0') : '';
     let codec = formatMatch ? formatMatch[1].trim().split('\n')[0].trim() : null;
     if (codec === 'MLP FBA' || codec === 'MLP FBA 16-ch') codec = 'TrueHD';
-    const bitrate = bitrateMatch ? bitrateMatch[1].trim() : null;
-
-    const flag = langFlag(langName, langType);
     const codecName = codec ? (CODEC_SHORT[codec] || codec) : '';
+    const bitrate = bitrateMatch ? bitrateMatch[1].trim() : '';
+    const flag = langFlag(langName, langType);
     const typeStr = langType ? ` (${langType})` : '';
-    const channelStr = channels || '';
-    const codecStr = codecName ? ` (${codecName})` : '';
-    const bitrateStr = bitrate ? ` • ${bitrate}` : '';
 
-    tracks.push(`${flag} ${langName}${typeStr} • ${channelStr}${codecStr}${bitrateStr}`);
+    tracks.push({ flag, langName, langType, typeStr, channels, codec: codecName, bitrate });
   }
   return tracks;
 }
 
-function parseFirstAudioTrack(mediainfoRaw) {
-  if (!mediainfoRaw) return null;
-  const audioRegex = /^Audio(?: #\d+)?\s*\n([\s\S]*?)(?=^(?:Audio|Text|Menu|$)|\n\n\n)/gm;
-  const match = audioRegex.exec(mediainfoRaw);
-  if (!match) return null;
-  const block = match[1];
-  const formatMatch = block.match(/Format\s*:\s*([^\n]+)/);
-  const channelsMatch = block.match(/Channel\(s\)\s*:\s*(\d+)/);
-  let codec = formatMatch ? formatMatch[1].trim().split('\n')[0].trim() : null;
-  if (codec === 'MLP FBA' || codec === 'MLP FBA 16-ch') codec = 'TrueHD';
-  const codecName = codec ? (CODEC_SHORT[codec] || codec) : '';
-  const channels = channelsMatch ? (parseInt(channelsMatch[1]) > 2 ? `${channelsMatch[1] - 1}.1` : '2.0') : '';
-  return { codec: codecName, channels };
+function formatAudioTrack(t) {
+  const codecStr = t.codec ? ` (${t.codec})` : '';
+  const bitrateStr = t.bitrate ? ` • ${t.bitrate}` : '';
+  return `${t.flag} ${t.langName}${t.typeStr} • ${t.channels}${codecStr}${bitrateStr}`;
 }
 
-function formatDetailedSubtitles(mediainfoRaw) {
+function parseDetailedAudioTracks(mediainfoRaw) {
+  return parseAudioTracksRaw(mediainfoRaw).map(formatAudioTrack);
+}
+
+function parseSubtitleTracksRaw(mediainfoRaw) {
   if (!mediainfoRaw) return [];
   const subs = [];
   const textRegex = /^Text(?: #\d+)?\s*\n([\s\S]*?)(?=^(?:Audio|Video|Text|Menu|$)|\n\n\n)/gm;
@@ -683,79 +677,234 @@ function formatDetailedSubtitles(mediainfoRaw) {
     let format = '';
     if (formatMatch) {
       const f = formatMatch[1].trim().split('\n')[0].trim().toUpperCase();
-      if (f === 'UTF-8' || f === 'SUBRIP') format = ' (SRT)';
-      else if (f === 'ASS') format = ' (ASS)';
-      else if (f === 'SSA') format = ' (SSA)';
-      else if (f === 'PGS') format = ' (PGS)';
-      else if (f === 'VOBSUB') format = ' (VobSub)';
-      else format = ` (${f})`;
+      if (f === 'UTF-8' || f === 'SUBRIP') format = 'SRT';
+      else if (f === 'ASS') format = 'ASS';
+      else if (f === 'SSA') format = 'SSA';
+      else if (f === 'PGS') format = 'PGS';
+      else if (f === 'VOBSUB') format = 'VobSub';
+      else format = f;
     }
 
-    subs.push(`${flag} ${langName}${qualifier}${format}`);
+    subs.push({ flag, langName, qualifier, format });
   }
   return subs;
 }
 
-function generateSimplePrez(nfoContent, mediaType, releaseName) {
-  const tech = parseNfoTechnical(nfoContent, releaseName);
-  let bb = '';
+function formatSubtitleTrack(s) {
+  const fmt = s.format ? ` (${s.format})` : '';
+  return `${s.flag} ${s.langName}${s.qualifier}${fmt}`;
+}
 
-  if (mediaType !== 'musique') {
-    // Badges vidéo
+function formatDetailedSubtitles(mediainfoRaw) {
+  return parseSubtitleTracksRaw(mediainfoRaw).map(formatSubtitleTrack);
+}
+
+// ---------------------- PREZ COMMON DATA ----------------------
+
+function extractPrezData(nfoContent, mediaType, releaseName) {
+  const tech = parseNfoTechnical(nfoContent, releaseName);
+  const audioRaw = parseAudioTracksRaw(nfoContent);
+  const subsRaw = parseSubtitleTracksRaw(nfoContent);
+  const audioFormatted = audioRaw.map(formatAudioTrack);
+  const subsFormatted = subsRaw.map(formatSubtitleTrack);
+
+  let codecLabel = tech.videoCodec;
+  if (codecLabel === 'H.265') codecLabel = 'x265';
+  else if (codecLabel === 'H.264') codecLabel = 'x264';
+
+  let qualityLabel = tech.quality;
+  if (qualityLabel.includes('1080')) qualityLabel = `HD ${qualityLabel}`;
+  else if (qualityLabel.includes('2160') || qualityLabel.includes('4K')) qualityLabel = `UHD ${qualityLabel}`;
+
+  const firstAudio = audioRaw[0] || null;
+  const audioLabel = firstAudio ? [firstAudio.codec, firstAudio.channels].filter(Boolean).join(' ') : '';
+
+  return { tech, audioRaw, subsRaw, audioFormatted, subsFormatted, codecLabel, qualityLabel, audioLabel, firstAudio, mediaType };
+}
+
+// ---------------------- PREZ STYLES ----------------------
+
+// Style 1: Badges + Grid Cards
+function prezStyle1(d) {
+  let bb = '';
+  if (d.mediaType !== 'musique') {
     const badges = [];
-    if (tech.videoCodec !== 'N/A') {
-      let codecLabel = tech.videoCodec;
-      if (codecLabel === 'H.265') codecLabel = 'x265';
-      else if (codecLabel === 'H.264') codecLabel = 'x264';
-      badges.push(`[badge=red][size=15]${codecLabel}[/size][/badge]`);
-    }
-    if (tech.bitDepth !== 'N/A') {
-      badges.push(`[badge=gray][size=15]${tech.bitDepth}[/size][/badge]`);
-    }
-    if (tech.quality !== 'N/A') {
-      let qualityLabel = tech.quality;
-      if (qualityLabel.includes('1080')) qualityLabel = `HD ${qualityLabel}`;
-      else if (qualityLabel.includes('2160') || qualityLabel.includes('4K')) qualityLabel = `UHD ${qualityLabel}`;
-      badges.push(`[badge=blue][size=15]${qualityLabel}[/size][/badge]`);
-    }
-    const firstAudio = parseFirstAudioTrack(nfoContent);
-    if (firstAudio && firstAudio.codec) {
-      const audioLabel = [firstAudio.codec, firstAudio.channels].filter(Boolean).join(' ');
-      badges.push(`[badge=purple][size=15]${audioLabel}[/size][/badge]`);
-    }
+    if (d.tech.videoCodec !== 'N/A') badges.push(`[badge=red][size=15]${d.codecLabel}[/size][/badge]`);
+    if (d.tech.bitDepth !== 'N/A') badges.push(`[badge=gray][size=15]${d.tech.bitDepth}[/size][/badge]`);
+    if (d.tech.quality !== 'N/A') badges.push(`[badge=blue][size=15]${d.qualityLabel}[/size][/badge]`);
+    if (d.audioLabel) badges.push(`[badge=purple][size=15]${d.audioLabel}[/size][/badge]`);
     bb += badges.join('');
   } else {
-    // Musique : badge codec audio
-    if (tech.audioCodec !== 'N/A') {
-      bb += `[badge=purple][size=15]${tech.audioCodec}[/size][/badge]`;
-    }
+    if (d.tech.audioCodec !== 'N/A') bb += `[badge=purple][size=15]${d.tech.audioCodec}[/size][/badge]`;
   }
   bb += '\n\n';
-
-  // Grille langues / sous-titres
-  const audioTracks = parseDetailedAudioTracks(nfoContent);
-  const subtitles = formatDetailedSubtitles(nfoContent);
-
-  if (audioTracks.length || subtitles.length) {
+  if (d.audioFormatted.length || d.subsFormatted.length) {
     bb += '[grid]\n';
-    if (audioTracks.length) {
+    if (d.audioFormatted.length) {
       bb += '[col]\n[card]\n';
       bb += '[card-title][size=25][b]🔊 Langues[/b][/size][/card-title]\n';
       bb += '[card-body]\n\n[list]\n';
-      bb += audioTracks.map(t => `[*]${t}`).join('\n') + '\n';
+      bb += d.audioFormatted.map(t => `[*]${t}`).join('\n') + '\n';
       bb += '[/list]\n\n[/card-body]\n[/card]\n[/col]\n';
     }
-    if (subtitles.length) {
+    if (d.subsFormatted.length) {
       bb += '\n[col]\n[card]\n';
       bb += '[card-title][size=25][b]📝 Sous-titres[/b][/size][/card-title]\n';
       bb += '[card-body]\n\n[list]\n';
-      bb += subtitles.map(s => `[*]${s}`).join('\n') + '\n';
+      bb += d.subsFormatted.map(s => `[*]${s}`).join('\n') + '\n';
       bb += '[/list]\n\n[/card-body]\n[/card]\n[/col]\n';
     }
     bb += '[/grid]\n';
   }
-
   return bb;
+}
+
+// Style 2: Horizontal Compact (colored text + hr + lists)
+function prezStyle2(d) {
+  let bb = '';
+  if (d.mediaType !== 'musique') {
+    const parts = [];
+    if (d.tech.videoCodec !== 'N/A') parts.push(`[color=#e74c3c][b]${d.codecLabel}[/b][/color]`);
+    if (d.tech.bitDepth !== 'N/A') parts.push(`[color=#95a5a6][b]${d.tech.bitDepth}[/b][/color]`);
+    if (d.tech.quality !== 'N/A') parts.push(`[color=#3498db][b]${d.qualityLabel}[/b][/color]`);
+    if (d.audioLabel) parts.push(`[color=#9b59b6][b]${d.audioLabel}[/b][/color]`);
+    bb += `[center][size=11]${parts.join(' · ')}[/size][/center]\n\n[hr]\n\n`;
+  } else {
+    if (d.tech.audioCodec !== 'N/A') bb += `[center][size=11][color=#9b59b6][b]${d.tech.audioCodec}[/b][/color][/size][/center]\n\n[hr]\n\n`;
+  }
+  if (d.audioFormatted.length) {
+    bb += `[size=14][color=#3498db][b]🔊 LANGUES[/b][/color][/size]\n`;
+    bb += '[list]\n' + d.audioFormatted.map(t => `[*]${t}`).join('\n') + '\n[/list]\n\n';
+  }
+  if (d.subsFormatted.length) {
+    bb += `[size=14][color=#3498db][b]📝 SOUS-TITRES[/b][/color][/size]\n`;
+    bb += '[list]\n' + d.subsFormatted.map(s => `[*]${s}`).join('\n') + '\n[/list]\n';
+  }
+  return bb;
+}
+
+// Style 3: Cards with Colored Headers (two-line audio format)
+function prezStyle3(d) {
+  let bb = '';
+  if (d.mediaType !== 'musique') {
+    bb += '[card]\n';
+    bb += `[card-title][color=#e74c3c][size=18][b]Technique[/b][/size][/color][/card-title]\n`;
+    bb += '[card-body]\n';
+    const badges = [];
+    if (d.tech.videoCodec !== 'N/A') badges.push(`[badge=red][size=13]${d.codecLabel}[/size][/badge]`);
+    if (d.tech.bitDepth !== 'N/A') badges.push(`[badge=gray][size=13]${d.tech.bitDepth}[/size][/badge]`);
+    if (d.tech.quality !== 'N/A') badges.push(`[badge=blue][size=13]${d.qualityLabel}[/size][/badge]`);
+    bb += badges.join(' ') + '\n';
+    bb += '[/card-body]\n[/card]\n\n';
+  }
+  bb += '[grid]\n';
+  if (d.audioRaw.length) {
+    bb += '[col]\n[card]\n';
+    bb += `[card-title][color=#2ecc71][size=18][b]🔊 Audio[/b][/size][/color][/card-title]\n`;
+    bb += '[card-body]\n';
+    bb += d.audioRaw.map(t => {
+      const details = [t.codec, t.channels, t.bitrate].filter(Boolean).join(' • ');
+      return `${t.flag} ${t.langName}${t.typeStr}\n[size=11][color=#7f8c8d]${details}[/color][/size]`;
+    }).join('\n\n') + '\n';
+    bb += '[/card-body]\n[/card]\n[/col]\n';
+  }
+  if (d.subsRaw.length) {
+    bb += '\n[col]\n[card]\n';
+    bb += `[card-title][color=#f39c12][size=18][b]📝 Sous-titres[/b][/size][/color][/card-title]\n`;
+    bb += '[card-body]\n';
+    bb += d.subsRaw.map(s => {
+      const fmt = s.format ? `\n[size=11][color=#7f8c8d]${s.format}[/color][/size]` : '';
+      return `${s.flag} ${s.langName}${s.qualifier}${fmt}`;
+    }).join('\n\n') + '\n';
+    bb += '[/card-body]\n[/card]\n[/col]\n';
+  }
+  bb += '[/grid]\n';
+  return bb;
+}
+
+// Style 4: Badges + Table
+function prezStyle4(d) {
+  let bb = '';
+  if (d.mediaType !== 'musique') {
+    const badges = [];
+    if (d.tech.videoCodec !== 'N/A') badges.push(`[badge=red][size=15]${d.codecLabel}[/size][/badge]`);
+    if (d.tech.bitDepth !== 'N/A') badges.push(`[badge=gray][size=15]${d.tech.bitDepth}[/size][/badge]`);
+    if (d.tech.quality !== 'N/A') badges.push(`[badge=blue][size=15]${d.qualityLabel}[/size][/badge]`);
+    if (d.audioLabel) badges.push(`[badge=purple][size=15]${d.audioLabel}[/size][/badge]`);
+    bb += `[center]\n${badges.join(' ')}\n[/center]\n\n`;
+  } else {
+    if (d.tech.audioCodec !== 'N/A') bb += `[center]\n[badge=purple][size=15]${d.tech.audioCodec}[/size][/badge]\n[/center]\n\n`;
+  }
+  bb += '[table]\n[tr]\n';
+  bb += `[td][b][color=#3d85c6][size=14]🔊 Langues[/size][/color][/b][/td]\n`;
+  bb += `[td][b][color=#3d85c6][size=14]📝 Sous-titres[/size][/color][/b][/td]\n`;
+  bb += '[/tr]\n[tr]\n[td]\n';
+  bb += d.audioFormatted.join('\n') + '\n';
+  bb += '[/td]\n[td]\n';
+  bb += (d.subsFormatted.length ? d.subsFormatted.join('\n') : 'Aucun') + '\n';
+  bb += '[/td]\n[/tr]\n[/table]\n';
+  return bb;
+}
+
+// Style 5: Ultra Minimal (everything on few lines)
+function prezStyle5(d) {
+  let bb = '';
+  if (d.mediaType !== 'musique') {
+    const parts = [];
+    if (d.tech.videoCodec !== 'N/A') parts.push(`[color=#e74c3c][b]${d.codecLabel}[/b][/color]`);
+    if (d.tech.bitDepth !== 'N/A') parts.push(`[color=#95a5a6][b]${d.tech.bitDepth}[/b][/color]`);
+    if (d.tech.quality !== 'N/A') parts.push(`[color=#3498db][b]${d.qualityLabel}[/b][/color]`);
+    if (d.audioLabel) parts.push(`[color=#9b59b6][b]${d.audioLabel}[/b][/color]`);
+    bb += parts.join(' | ') + '\n\n';
+  } else {
+    if (d.tech.audioCodec !== 'N/A') bb += `[color=#9b59b6][b]${d.tech.audioCodec}[/b][/color]\n\n`;
+  }
+  if (d.audioRaw.length) {
+    const langs = d.audioRaw.map(t => `${t.flag} ${t.langType || t.langName}`).join(' • ');
+    const codec = d.audioRaw[0].codec;
+    const channels = d.audioRaw[0].channels;
+    const bitrate = d.audioRaw[0].bitrate;
+    const details = [codec, channels, bitrate ? `@ ${bitrate}` : ''].filter(Boolean).join(' ');
+    bb += `[b]🔊[/b] ${langs} — ${details}\n`;
+  }
+  if (d.subsRaw.length) {
+    const subs = d.subsRaw.map(s => `${s.flag} ${s.qualifier.trim() || s.langName}`).join(' • ');
+    const fmt = d.subsRaw[0].format || '';
+    bb += `[b]📝[/b] ${subs}${fmt ? ` — ${fmt}` : ''}\n`;
+  }
+  return bb;
+}
+
+// Style 6: Badges + Quote Blocks
+function prezStyle6(d) {
+  let bb = '';
+  if (d.mediaType !== 'musique') {
+    const badges = [];
+    if (d.tech.videoCodec !== 'N/A') badges.push(`[badge=red][size=15]${d.codecLabel}[/size][/badge]`);
+    if (d.tech.bitDepth !== 'N/A') badges.push(`[badge=gray][size=15]${d.tech.bitDepth}[/size][/badge]`);
+    if (d.tech.quality !== 'N/A') badges.push(`[badge=blue][size=15]${d.qualityLabel}[/size][/badge]`);
+    if (d.audioLabel) badges.push(`[badge=purple][size=15]${d.audioLabel}[/size][/badge]`);
+    bb += badges.join('') + '\n\n';
+  } else {
+    if (d.tech.audioCodec !== 'N/A') bb += `[badge=purple][size=15]${d.tech.audioCodec}[/size][/badge]\n\n`;
+  }
+  if (d.audioFormatted.length) {
+    bb += `[size=16][b]🔊 Langues[/b][/size]\n`;
+    bb += '[quote]\n' + d.audioFormatted.join('\n') + '\n[/quote]\n\n';
+  }
+  if (d.subsFormatted.length) {
+    bb += `[size=16][b]📝 Sous-titres[/b][/size]\n`;
+    bb += '[quote]\n' + d.subsFormatted.join('\n') + '\n[/quote]\n';
+  }
+  return bb;
+}
+
+const PREZ_STYLES = { 1: prezStyle1, 2: prezStyle2, 3: prezStyle3, 4: prezStyle4, 5: prezStyle5, 6: prezStyle6 };
+
+function generateSimplePrez(nfoContent, mediaType, releaseName) {
+  const data = extractPrezData(nfoContent, mediaType, releaseName);
+  const styleFn = PREZ_STYLES[PREZ_STYLE] || prezStyle1;
+  return styleFn(data);
 }
 
 function getDirTotalSize(dirPath) {

@@ -25,6 +25,7 @@ services:
       - PARALLEL_JOBS=1
       # - ENABLE_PREZ=true
       # - FORCE_PREZ=false
+      # - PREZ_STYLE=1          # 1-6 (1=badges+grid, 2=compact, 3=colored cards, 4=table, 5=ultra-minimal, 6=quote blocks)
 
     volumes:
       # Entrées
