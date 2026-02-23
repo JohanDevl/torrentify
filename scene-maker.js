@@ -372,34 +372,19 @@ function parseAudioTracks(mediainfoRaw) {
   while ((match = audioRegex.exec(mediainfoRaw)) !== null) {
     const audioBlock = match[1];
     const titleMatch = audioBlock.match(/Title\s*:\s*([^\n]+)/);
-    const langMatch = audioBlock.match(/Language\s*:\s*(\w+)/);
+    const langMatch = audioBlock.match(/Language\s*:\s*(\w+)(?:\s*\((\w+)\))?/);
     let langName = null;
+    const langCountry = langMatch && langMatch[2] ? langMatch[2].toUpperCase() : null;
     let langType = null;
     if (titleMatch) {
-      const title = titleMatch[1].trim();
-      // Try structured format: "FR VFF : AC3 5.1", "ENG VO : AC3 5.1"
-      const typeMatch = title.match(/^(\w{2,3})\s*(VFF|VFQ|VFI|VF2|VO|VOF|VOST|VFB)?(?:\s|:)/i);
-      if (typeMatch) {
-        langName = langCodeToName(typeMatch[1]);
-        if (typeMatch[2]) langType = typeMatch[2].toUpperCase();
-      } else {
-        // Try full language name: "French DTS", "English 5.1", "Français (VFF)"
-        const firstWord = title.match(/^([\w\u00C0-\u024F]+)/);
-        if (firstWord) {
-          const resolved = langCodeToName(firstWord[1]);
-          if (resolved && LANG_TO_COUNTRY[resolved]) {
-            langName = resolved;
-            const variantMatch = title.match(/\b(VFF|VFQ|VFI|VF2|VO|VOF|VOST|VFB)\b/i);
-            if (variantMatch) langType = variantMatch[1].toUpperCase();
-          }
-        }
-      }
+      const variantMatch = titleMatch[1].match(/\b(VFF|VFQ|VFI|VF2|VOF|VOST|VFB|VF|VO)\b/i);
+      if (variantMatch) langType = variantMatch[1].toUpperCase();
     }
-    if (!langName && langMatch) {
+    if (langMatch) {
       langName = langCodeToName(langMatch[1]);
     }
     if (langName) {
-      const flag = langFlag(langName, langType);
+      const flag = langFlag(langName, langType, langCountry);
       const trackInfo = langType ? `${flag} ${langName} (${langType})` : `${flag} ${langName}`;
       if (!tracks.includes(trackInfo)) tracks.push(trackInfo);
     }
@@ -415,9 +400,10 @@ function parseSubtitleTracks(mediainfoRaw) {
   while ((match = textRegex.exec(mediainfoRaw)) !== null) {
     const textBlock = match[1];
     const titleMatch = textBlock.match(/Title\s*:\s*([^\n]+)/);
-    const langMatch = textBlock.match(/Language\s*:\s*(\w+)/);
+    const langMatch = textBlock.match(/Language\s*:\s*(\w+)(?:\s*\((\w+)\))?/);
     const forcedMatch = textBlock.match(/Forced\s*:\s*(\w+)/);
     let langName = null;
+    const langCountry = langMatch && langMatch[2] ? langMatch[2].toUpperCase() : null;
     let subType = null;
     if (langMatch) langName = langCodeToName(langMatch[1]);
     if (titleMatch) {
@@ -428,13 +414,13 @@ function parseSubtitleTracks(mediainfoRaw) {
     }
     if (!subType && forcedMatch && forcedMatch[1].toLowerCase() === 'yes') subType = 'Forcé';
     if (langName) {
-      if (!langTypes.has(langName)) langTypes.set(langName, new Set());
-      if (subType) langTypes.get(langName).add(subType);
+      if (!langTypes.has(langName)) langTypes.set(langName, { types: new Set(), country: langCountry });
+      if (subType) langTypes.get(langName).types.add(subType);
     }
   }
   const result = [];
-  for (const [lang, types] of langTypes) {
-    const flag = langFlag(lang);
+  for (const [lang, { types, country }] of langTypes) {
+    const flag = langFlag(lang, null, country);
     if (types.size === 0) {
       result.push(`${flag} ${lang}`);
     } else {
@@ -595,17 +581,18 @@ const VARIANT_COUNTRY = {
   'VFQ': 'CA', 'VFB': 'BE'
 };
 
-function langFlag(langName, variant) {
+function langFlag(langName, variant, langCountry) {
   if (variant) {
     const vc = VARIANT_COUNTRY[variant];
     if (vc) return countryToFlag(vc);
   }
+  if (langCountry) return countryToFlag(langCountry);
   const cc = LANG_TO_COUNTRY[langName];
   return cc ? countryToFlag(cc) : '🏳️';
 }
 
 const CODEC_SHORT = {
-  'E-AC-3': 'EAC3', 'AC-3': 'AC3', 'TrueHD': 'TrueHD',
+  'E-AC-3': 'EAC3', 'E-AC-3 JOC': 'EAC3 Atmos', 'AC-3': 'AC3', 'TrueHD': 'TrueHD',
   'TrueHD Atmos': 'TrueHD Atmos', 'E-AC-3 Atmos': 'EAC3 Atmos',
   'DTS-HD MA': 'DTS-HD MA', 'DTS-HD': 'DTS-HD', 'DTS': 'DTS',
   'DTS:X': 'DTS:X', 'AAC': 'AAC', 'HE-AAC': 'HE-AAC',
@@ -621,33 +608,18 @@ function parseAudioTracksRaw(mediainfoRaw) {
   let match;
   while ((match = audioRegex.exec(mediainfoRaw)) !== null) {
     const block = match[1];
-    const langMatch = block.match(/Language\s*:\s*(\w+)/);
+    const langMatch = block.match(/Language\s*:\s*(\w+)(?:\s*\((\w+)\))?/);
     const titleMatch = block.match(/Title\s*:\s*([^\n]+)/);
     const formatMatch = block.match(/Format\s*:\s*([^\n]+)/);
     const channelsMatch = block.match(/Channel\(s\)\s*:\s*(\d+)/);
     const bitrateMatch = block.match(/Bit rate\s*:\s*([^\n]+)/);
 
     let langName = langMatch ? langCodeToName(langMatch[1]) : null;
+    const langCountry = langMatch && langMatch[2] ? langMatch[2].toUpperCase() : null;
     let langType = null;
     if (titleMatch) {
-      const t = titleMatch[1].trim();
-      // Try structured format: "FR VFF : AC3 5.1", "ENG VO : AC3 5.1"
-      const tm = t.match(/^(\w{2,3})\s*(VFF|VFQ|VFI|VF2|VO|VOF|VOST|VFB)?(?:\s|:)/i);
-      if (tm) {
-        langName = langCodeToName(tm[1]);
-        if (tm[2]) langType = tm[2].toUpperCase();
-      } else {
-        // Try full language name: "French DTS", "English 5.1", "Français (VFF)"
-        const firstWord = t.match(/^([\w\u00C0-\u024F]+)/);
-        if (firstWord) {
-          const resolved = langCodeToName(firstWord[1]);
-          if (resolved && LANG_TO_COUNTRY[resolved]) {
-            langName = resolved;
-            const variantMatch = t.match(/\b(VFF|VFQ|VFI|VF2|VO|VOF|VOST|VFB)\b/i);
-            if (variantMatch) langType = variantMatch[1].toUpperCase();
-          }
-        }
-      }
+      const variantMatch = titleMatch[1].match(/\b(VFF|VFQ|VFI|VF2|VOF|VOST|VFB|VF|VO)\b/i);
+      if (variantMatch) langType = variantMatch[1].toUpperCase();
     }
     if (!langName) continue;
 
@@ -656,7 +628,7 @@ function parseAudioTracksRaw(mediainfoRaw) {
     if (codec === 'MLP FBA' || codec === 'MLP FBA 16-ch') codec = 'TrueHD';
     const codecName = codec ? (CODEC_SHORT[codec] || codec) : '';
     const bitrate = bitrateMatch ? bitrateMatch[1].trim() : '';
-    const flag = langFlag(langName, langType);
+    const flag = langFlag(langName, langType, langCountry);
     const typeStr = langType ? ` (${langType})` : '';
 
     tracks.push({ flag, langName, langType, typeStr, channels, codec: codecName, bitrate });
@@ -681,13 +653,14 @@ function parseSubtitleTracksRaw(mediainfoRaw) {
   let match;
   while ((match = textRegex.exec(mediainfoRaw)) !== null) {
     const block = match[1];
-    const langMatch = block.match(/Language\s*:\s*(\w+)/);
+    const langMatch = block.match(/Language\s*:\s*(\w+)(?:\s*\((\w+)\))?/);
     const titleMatch = block.match(/Title\s*:\s*([^\n]+)/);
     const forcedMatch = block.match(/Forced\s*:\s*(\w+)/);
     const formatMatch = block.match(/Format\s*:\s*([^\n]+)/);
     if (!langMatch) continue;
     const langName = langCodeToName(langMatch[1]);
-    const flag = langFlag(langName);
+    const langCountry = langMatch[2] ? langMatch[2].toUpperCase() : null;
+    const flag = langFlag(langName, null, langCountry);
 
     let qualifier = '';
     if (titleMatch) {
