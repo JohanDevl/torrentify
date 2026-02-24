@@ -6,7 +6,14 @@ const regenerate = require('./lib/regenerate');
 
 const app = express();
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+  etag: false,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  }
+}));
 app.use(express.json());
 
 try {

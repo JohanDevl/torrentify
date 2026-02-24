@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const viewsDir = path.join(__dirname, '..', 'views');
+const buildTs = Date.now();
 
 function sendPage(res, viewName, replacements = {}) {
   try {
@@ -11,7 +12,8 @@ function sendPage(res, viewName, replacements = {}) {
     const page = fs.readFileSync(path.join(viewsDir, `${viewName}.html`), 'utf8');
     html = html.replace('<!--PAGE_CONTENT-->', page);
     const jsFile = viewName === 'media-detail' ? 'media' : viewName.replace(/-/g, '');
-    html = html.replace('</body>', `<script src="/js/${jsFile}.js"></script>\n</body>`);
+    html = html.replace('/js/app.js', `/js/app.js?v=${buildTs}`);
+    html = html.replace('</body>', `<script src="/js/${jsFile}.js?v=${buildTs}"></script>\n</body>`);
     for (const [key, value] of Object.entries(replacements)) {
       html = html.replace(new RegExp(`{{${key}}}`, 'g'), value);
     }
