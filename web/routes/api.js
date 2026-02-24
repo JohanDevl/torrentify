@@ -7,6 +7,11 @@ const events = require('../lib/events');
 const regenerate = require('../lib/regenerate');
 const db = require('../../db');
 
+// GET /api/health - Quick health check
+router.get('/health', (req, res) => {
+  res.json({ ok: true, timestamp: Date.now() });
+});
+
 // GET /api/stats - Dashboard statistics
 router.get('/stats', (req, res) => {
   try {

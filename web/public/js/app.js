@@ -30,6 +30,7 @@ const SSE = {
 
     this.connection.onerror = () => {
       this.connection.close();
+      updateStatusIndicator('error');
       this.reconnectTimeout = setTimeout(() => this.connect(), 5000);
     };
   },
@@ -60,20 +61,38 @@ const SSE = {
 
 // API Helper
 async function api(path, options = {}) {
-  const res = await fetch(`/api${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-    body: options.body ? JSON.stringify(options.body) : undefined
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || `HTTP ${res.status}`);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const headers = {};
+    if (options.body) {
+      headers['Content-Type'] = 'application/json';
+    }
+
+    const res = await fetch(`/api${path}`, {
+      ...options,
+      headers: { ...headers, ...(options.headers || {}) },
+      body: options.body ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || `HTTP ${res.status}`);
+    }
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('text/plain')) {
+      return res.text();
+    }
+    return res.json();
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('Timeout: le serveur ne repond pas');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
   }
-  const contentType = res.headers.get('content-type');
-  if (contentType && contentType.includes('text/plain')) {
-    return res.text();
-  }
-  return res.json();
 }
 
 // Toast notifications

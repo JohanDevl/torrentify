@@ -172,6 +172,8 @@ async function initDetailPage() {
 
     if (detail.sourceInfo) {
       renderSourceInfo(detail.sourceInfo);
+    } else {
+      document.getElementById('source-content').textContent = 'Aucune information disponible';
     }
 
     // Override panel (films/series only)
