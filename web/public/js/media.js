@@ -151,35 +151,9 @@ async function initDetailPage() {
   document.getElementById('btn-regenerate').addEventListener('click', () => regenerateItem(type, name));
   document.getElementById('btn-delete').addEventListener('click', () => deleteItem(type, name));
 
+  let detail;
   try {
-    const detail = await api(`/media/${type}/${encodeURIComponent(name)}`);
-
-    if (detail.metadata) {
-      renderMetadata(detail.metadata, type);
-    } else {
-      document.getElementById('metadata-content').innerHTML =
-        '<div class="empty-state" style="min-height: 150px;"><div class="empty-state-title">Pas de metadata disponible</div></div>';
-    }
-
-    if (detail.files && detail.files.length > 0) {
-      renderFileTabs(detail.files, type, name);
-    } else {
-      document.getElementById('file-tabs').innerHTML =
-        '<div style="padding: var(--spacing-lg); color: var(--text-muted);">Aucun fichier</div>';
-      document.getElementById('file-viewer').innerHTML =
-        '<div class="empty-state"><div class="empty-state-title">Aucun fichier</div></div>';
-    }
-
-    if (detail.sourceInfo) {
-      renderSourceInfo(detail.sourceInfo);
-    } else {
-      document.getElementById('source-content').textContent = 'Aucune information disponible';
-    }
-
-    // Override panel (films/series only)
-    if (type === 'films' || type === 'series') {
-      initOverridePanel(type, name, detail);
-    }
+    detail = await api(`/media/${type}/${encodeURIComponent(name)}`);
   } catch (err) {
     console.error('Error loading detail:', err);
     showToast(err.message, 'error');
@@ -192,6 +166,59 @@ async function initDetailPage() {
       '<div class="empty-state" style="min-height: 200px;"><div class="empty-state-title">Impossible de charger les fichiers</div></div>';
 
     document.getElementById('source-content').textContent = 'Erreur de chargement';
+    return;
+  }
+
+  // Metadata section
+  try {
+    if (detail.metadata) {
+      renderMetadata(detail.metadata, type);
+    } else {
+      document.getElementById('metadata-content').innerHTML =
+        '<div class="empty-state" style="min-height: 150px;"><div class="empty-state-title">Pas de metadata disponible</div></div>';
+    }
+  } catch (err) {
+    console.error('Error rendering metadata:', err);
+    document.getElementById('metadata-content').innerHTML =
+      '<div class="empty-state" style="min-height: 150px;"><div class="empty-state-title">Erreur d\'affichage metadata</div></div>';
+  }
+
+  // Files section
+  try {
+    if (detail.files && detail.files.length > 0) {
+      renderFileTabs(detail.files, type, name);
+    } else {
+      document.getElementById('file-tabs').innerHTML =
+        '<div style="padding: var(--spacing-lg); color: var(--text-muted);">Aucun fichier</div>';
+      document.getElementById('file-viewer').innerHTML =
+        '<div class="empty-state"><div class="empty-state-title">Aucun fichier</div></div>';
+    }
+  } catch (err) {
+    console.error('Error rendering files:', err);
+    document.getElementById('file-tabs').innerHTML = '';
+    document.getElementById('file-viewer').innerHTML =
+      '<div class="empty-state" style="min-height: 200px;"><div class="empty-state-title">Erreur d\'affichage fichiers</div></div>';
+  }
+
+  // Source section
+  try {
+    if (detail.sourceInfo) {
+      renderSourceInfo(detail.sourceInfo);
+    } else {
+      document.getElementById('source-content').textContent = 'Aucune information disponible';
+    }
+  } catch (err) {
+    console.error('Error rendering source:', err);
+    document.getElementById('source-content').textContent = 'Erreur de chargement';
+  }
+
+  // Override panel (films/series only)
+  try {
+    if (type === 'films' || type === 'series') {
+      initOverridePanel(type, name, detail);
+    }
+  } catch (err) {
+    console.error('Error rendering override panel:', err);
   }
 }
 
@@ -205,29 +232,45 @@ function renderMetadata(metadata, type) {
 
   let html = '<div style="display: flex; gap: var(--spacing-xl); flex-wrap: wrap; align-items: flex-start;">';
 
-  if (metadata.poster) {
+  // Poster: TMDb uses poster_path, iTunes uses artworkUrl100
+  const posterPath = metadata.poster_path || metadata.poster;
+  if (posterPath) {
+    const posterUrl = posterPath.startsWith('/') ? `/api/images/tmdb/w300${posterPath}` : posterPath;
     html += `<div style="flex-shrink: 0; min-width: 120px;">
-      <img src="${escapeHtml(metadata.poster)}" alt="Poster" style="width: 120px; height: auto; border-radius: var(--radius-lg);" />
+      <img src="${escapeHtml(posterUrl)}" alt="Poster" style="width: 120px; height: auto; border-radius: var(--radius-lg);" onerror="this.style.display='none'" />
+    </div>`;
+  } else if (metadata.artworkUrl100) {
+    const artworkUrl = metadata.artworkUrl100.replace('100x100', '300x300');
+    html += `<div style="flex-shrink: 0; min-width: 120px;">
+      <img src="${escapeHtml(artworkUrl)}" alt="Cover" style="width: 120px; height: auto; border-radius: var(--radius-lg);" onerror="this.style.display='none'" />
     </div>`;
   }
 
   html += '<div style="flex: 1; min-width: 250px;">';
 
-  if (metadata.title) {
-    html += `<div style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-sm);">${escapeHtml(metadata.title)}</div>`;
+  // Title: TMDb uses title (movies) or name (TV), iTunes uses trackName/collectionName
+  const title = metadata.title || metadata.name || metadata.collectionName || metadata.trackName;
+  if (title) {
+    html += `<div style="font-size: 18px; font-weight: 600; color: var(--text-primary); margin-bottom: var(--spacing-sm);">${escapeHtml(title)}</div>`;
   }
 
-  if (metadata.year) {
-    html += `<div style="font-size: 14px; color: var(--text-secondary); margin-bottom: var(--spacing-md);">${metadata.year}`;
-    if (metadata.rating) {
-      html += ` • ⭐ ${(metadata.rating / 10).toFixed(1)}/10`;
+  // Year: TMDb uses release_date (movies) or first_air_date (TV)
+  const dateStr = metadata.release_date || metadata.first_air_date || metadata.year;
+  const year = dateStr ? (typeof dateStr === 'string' ? dateStr.substring(0, 4) : dateStr) : null;
+  const rating = metadata.vote_average || metadata.rating;
+
+  if (year) {
+    html += `<div style="font-size: 14px; color: var(--text-secondary); margin-bottom: var(--spacing-md);">${escapeHtml(String(year))}`;
+    if (rating) {
+      html += ` &bull; &#11088; ${Number(rating).toFixed(1)}/10`;
     }
     html += `</div>`;
   }
 
+  // Genres: TMDb returns [{id, name}], handle both object and string arrays
   if (metadata.genres && metadata.genres.length > 0) {
     html += `<div style="margin-bottom: var(--spacing-md);">
-      ${metadata.genres.map(g => `<span class="badge badge-info">${escapeHtml(g)}</span>`).join('')}
+      ${metadata.genres.map(g => `<span class="badge badge-info">${escapeHtml(typeof g === 'object' ? g.name : g)}</span>`).join('')}
     </div>`;
   }
 
@@ -236,18 +279,32 @@ function renderMetadata(metadata, type) {
   }
 
   if (type === 'musiques') {
-    if (metadata.artist) {
-      html += `<div style="margin-top: var(--spacing-lg); font-size: 13px;"><strong>Artist:</strong> ${escapeHtml(metadata.artist)}</div>`;
+    const artist = metadata.artistName || metadata.artist;
+    const album = metadata.collectionName || metadata.album;
+    if (artist) {
+      html += `<div style="margin-top: var(--spacing-lg); font-size: 13px;"><strong>Artiste:</strong> ${escapeHtml(artist)}</div>`;
     }
-    if (metadata.album) {
-      html += `<div style="font-size: 13px;"><strong>Album:</strong> ${escapeHtml(metadata.album)}</div>`;
+    if (album) {
+      html += `<div style="font-size: 13px;"><strong>Album:</strong> ${escapeHtml(album)}</div>`;
     }
   } else {
-    if (metadata.director) {
-      html += `<div style="margin-top: var(--spacing-lg); font-size: 13px;"><strong>Directeur:</strong> ${escapeHtml(metadata.director)}</div>`;
+    // Director: TMDb stores in credits.crew
+    const director = metadata.director ||
+      (metadata.credits && metadata.credits.crew
+        ? (metadata.credits.crew.find(c => c.job === 'Director') || {}).name
+        : null);
+    if (director) {
+      html += `<div style="margin-top: var(--spacing-lg); font-size: 13px;"><strong>Realisateur:</strong> ${escapeHtml(director)}</div>`;
     }
-    if (metadata.cast && metadata.cast.length > 0) {
-      html += `<div style="font-size: 13px;"><strong>Acteurs:</strong> ${escapeHtml(metadata.cast.slice(0, 3).join(', '))}${metadata.cast.length > 3 ? '...' : ''}</div>`;
+
+    // Cast: TMDb stores in credits.cast as [{name, ...}]
+    const castList = metadata.cast ||
+      (metadata.credits && metadata.credits.cast
+        ? metadata.credits.cast.slice(0, 5).map(c => c.name)
+        : null);
+    if (castList && castList.length > 0) {
+      const names = castList.slice(0, 5).map(c => typeof c === 'object' ? c.name : c);
+      html += `<div style="font-size: 13px;"><strong>Acteurs:</strong> ${escapeHtml(names.join(', '))}${castList.length > 5 ? '...' : ''}</div>`;
     }
   }
 
